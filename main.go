@@ -70,6 +70,12 @@ type Kml struct {
 	} `xml:"Document"`
 }
 
+const (
+	isDir = iota
+	isFile
+	isMissing
+)
+
 var (
 	kmlfile string
 	csvfile string
@@ -87,12 +93,33 @@ func main() {
 
 	// rawXMLData := "<data><person><firstname>Nic</firstname><lastname>Raboy</lastname><address><city>San Francisco</city><state>CA</state></address></person><person><firstname>Maria</firstname><lastname>Raboy</lastname></person></data>"
 
-	if !FileExists(kmlfile) {
-		kmlfile = "kml file"
+	if FileExists(kmlfile) == isMissing {
+		if kmlfile == "" {
+			kmlfile = "kml file"
+		}
+
 		log.Fatal(fmt.Sprintf("%s doesn't exist, exiting!", kmlfile))
 	}
 
-	if r, err = GetFile(kmlfile); err != nil {
+	if FileExists(kmlfile) == isDir {
+		if kmlfile == "" {
+			kmlfile = "kml file"
+		}
+
+		log.Fatal(fmt.Sprintf("%s is a directory, exiting!", kmlfile))
+	}
+
+	if csvfile != "" {
+		if FileExists(csvfile) == isDir {
+			log.Fatal(fmt.Sprintf("%s is a directory, exiting!", kmlfile))
+		}
+
+		if FileExists(csvfile) == isMissing {
+			log.Fatal(fmt.Sprintf("%s doesn't exist, exiting!", kmlfile))
+		}
+	}
+
+	if r, err = OpenFile(kmlfile); err != nil {
 		log.Fatal(err)
 	}
 
@@ -109,12 +136,32 @@ func main() {
 	}
 
 	fmt.Println(string(b))
+
 }
 
-// GetFile reads a file and returns an io.Reader
-func GetFile(f string) (io.Reader, error) {
+// FileExists checks if a file exists and is not a directory before opening
+func FileExists(f string) int {
+	info, err := os.Stat(f)
+	if os.IsNotExist(err) {
+		return isMissing
+	}
+
+	if info.IsDir() {
+		return isDir
+	}
+
+	return isFile
+}
+
+// OpenFile opens a file and returns an io.Reader
+func OpenFile(f string) (io.Reader, error) {
 	// nolint
 	return os.Open(f)
+}
+
+// WriteFile opens or creates a file for writing to
+func WriteFile(f string, b []byte) error {
+	return ioutil.WriteFile(f, b, 0644)
 }
 
 // GetParams processes command line parameters
@@ -137,14 +184,4 @@ func GetParams() {
 		args.Usage()
 		os.Exit(1)
 	}
-}
-
-// FileExists checks if a file exists and is not a directory before we
-// try using it to prevent further errors.
-func FileExists(f string) bool {
-	info, err := os.Stat(f)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
