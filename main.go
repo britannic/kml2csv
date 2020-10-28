@@ -109,14 +109,8 @@ func main() {
 		log.Fatal(fmt.Sprintf("%s is a directory, exiting!", kmlfile))
 	}
 
-	if csvfile != "" {
-		if FileExists(csvfile) == isDir {
-			log.Fatal(fmt.Sprintf("%s is a directory, exiting!", kmlfile))
-		}
-
-		if FileExists(csvfile) == isMissing {
-			log.Fatal(fmt.Sprintf("%s doesn't exist, exiting!", kmlfile))
-		}
+	if csvfile != "" && FileExists(csvfile) == isDir {
+		log.Fatal(fmt.Sprintf("%s is a directory, exiting!", kmlfile))
 	}
 
 	if r, err = OpenFile(kmlfile); err != nil {
@@ -133,6 +127,14 @@ func main() {
 
 	if b, err = json.Marshal(data); err != nil {
 		log.Fatal(err)
+	}
+
+	if csvfile != "" {
+		if WriteFile(csvfile, b) != nil {
+			log.Fatal(err)
+		}
+		log.Printf("xml converted to csv and saved to %s", csvfile)
+		os.Exit(0)
 	}
 
 	fmt.Println(string(b))
