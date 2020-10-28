@@ -104,8 +104,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	jsonData, _ := json.Marshal(data)
-	fmt.Println(string(jsonData))
+	if b, err = json.Marshal(data); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(b))
 }
 
 // GetFile reads a file and returns an io.Reader
@@ -127,9 +130,6 @@ func GetParams() {
 
 	args.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage %s:\n", os.Args[0])
-		// args.VisitAll(func(f *flag.Flag) {
-		// 	fmt.Fprintf(os.Stderr, "    %v\n", f.Usage)
-		// })
 		args.PrintDefaults()
 	}
 
@@ -137,8 +137,6 @@ func GetParams() {
 		args.Usage()
 		os.Exit(1)
 	}
-
-	// return nil
 }
 
 // FileExists checks if a file exists and is not a directory before we
