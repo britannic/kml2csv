@@ -1,1 +1,4 @@
-kml2csv
+*
+!*.go
+!*.mod
+!*.md
