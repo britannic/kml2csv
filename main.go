@@ -1,6 +1,15 @@
 package main
 
-import "encoding/xml"
+import (
+	"encoding/json"
+	"encoding/xml"
+	"flag"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+)
 
 // Kml holds the xml structure for kml files
 type Kml struct {
@@ -59,4 +68,85 @@ type Kml struct {
 			} `xml:"ExtendedData"`
 		} `xml:"Placemark"`
 	} `xml:"Document"`
+}
+
+var (
+	kmlfile string
+	csvfile string
+)
+
+func main() {
+	var (
+		b    []byte
+		data Kml
+		err  error
+		r    io.Reader
+	)
+
+	GetParams()
+
+	// rawXMLData := "<data><person><firstname>Nic</firstname><lastname>Raboy</lastname><address><city>San Francisco</city><state>CA</state></address></person><person><firstname>Maria</firstname><lastname>Raboy</lastname></person></data>"
+
+	if !FileExists(kmlfile) {
+		kmlfile = "kml file"
+		log.Fatal(fmt.Sprintf("%s doesn't exist, exiting!", kmlfile))
+	}
+
+	if r, err = GetFile(kmlfile); err != nil {
+		log.Fatal(err)
+	}
+
+	if b, err = ioutil.ReadAll(r); err != nil {
+		log.Fatal(err)
+	}
+
+	if err = xml.Unmarshal(b, &data); err != nil {
+		log.Fatal(err)
+	}
+
+	jsonData, _ := json.Marshal(data)
+	fmt.Println(string(jsonData))
+}
+
+// GetFile reads a file and returns an io.Reader
+func GetFile(f string) (io.Reader, error) {
+	// nolint
+	return os.Open(f)
+}
+
+// GetParams processes command line parameters
+func GetParams() {
+	var (
+		args = flag.NewFlagSet("kml2csv", flag.ExitOnError)
+		help bool
+	)
+
+	args.StringVar(&kmlfile, "kml", "", "kml file to parse")
+	args.StringVar(&csvfile, "csv", "", "csv file to parse")
+	args.BoolVar(&help, "?", false, "Show help")
+
+	args.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage %s:\n", os.Args[0])
+		// args.VisitAll(func(f *flag.Flag) {
+		// 	fmt.Fprintf(os.Stderr, "    %v\n", f.Usage)
+		// })
+		args.PrintDefaults()
+	}
+
+	if args.Parse(os.Args[1:]) != nil || help || len(os.Args) <= 2 {
+		args.Usage()
+		os.Exit(1)
+	}
+
+	// return nil
+}
+
+// FileExists checks if a file exists and is not a directory before we
+// try using it to prevent further errors.
+func FileExists(f string) bool {
+	info, err := os.Stat(f)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
