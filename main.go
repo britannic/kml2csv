@@ -13,6 +13,16 @@ import (
 	"os"
 )
 
+// ExtendedData holds the extended data set for each Placemark
+type ExtendedData struct {
+	Text string `xml:",chardata" json:"-"`
+	Data []struct {
+		Text  string `xml:",chardata" json:"-"`
+		Name  string `xml:"name,attr" json:"Name"`
+		Value string `xml:"value" json:"Value"`
+	} `xml:"Data" json:"Data"`
+}
+
 // Placemark holds the listing subset
 type Placemark []struct {
 	Text         string `xml:",chardata" json:"-"`
@@ -20,14 +30,7 @@ type Placemark []struct {
 	Address      string `xml:"address"`
 	Description  string `xml:"description"`
 	StyleURL     string `xml:"styleUrl" json:"-"`
-	ExtendedData struct {
-		Text string `xml:",chardata" json:"-"`
-		Data []struct {
-			Text  string `xml:",chardata" json:"-"`
-			Name  string `xml:"name,attr"`
-			Value string `xml:"value"`
-		} `xml:"Data"`
-	} `xml:"ExtendedData"`
+	ExtendedData `xml:"ExtendedData" json:"ExtendedData"`
 }
 
 // Kml holds the xml structure for kml files
@@ -136,7 +139,21 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// fmt.Printf("%v\n", string(b))
+
 	if csvfile != "" {
+		// type csvStruct struct {
+		// 	registryNo string
+		// 	firstname  string
+		// 	lastname   string
+		// 	address1   string
+		// 	address2   string
+		// 	city       string
+		// 	state      string
+		// 	zip        string
+		// 	details    string
+		// }
+
 		var (
 			f *os.File
 			j Placemark
@@ -155,8 +172,17 @@ func main() {
 
 		w = csv.NewWriter(f)
 
+		row := []string{"Name", "Address", "Description"}
+
 		for _, listing := range j {
-			var row []string
+
+			// for _, edata := range listing.ExtendedData.Data {
+			// 	switch edata.Name {
+			// 	case "Registry Number":
+			// 		fmt.Println(edata.Value)
+			// 	}
+			// }
+
 			row = append(row, listing.Name)
 			row = append(row, listing.Address)
 			row = append(row, listing.Description)
