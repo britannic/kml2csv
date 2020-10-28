@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
 	"flag"
@@ -10,6 +12,23 @@ import (
 	"log"
 	"os"
 )
+
+// Placemark holds the listing subset
+type Placemark []struct {
+	Text         string `xml:",chardata" json:"-"`
+	Name         string `xml:"name"`
+	Address      string `xml:"address"`
+	Description  string `xml:"description"`
+	StyleURL     string `xml:"styleUrl" json:"-"`
+	ExtendedData struct {
+		Text string `xml:",chardata" json:"-"`
+		Data []struct {
+			Text  string `xml:",chardata" json:"-"`
+			Name  string `xml:"name,attr"`
+			Value string `xml:"value"`
+		} `xml:"Data"`
+	} `xml:"ExtendedData"`
+}
 
 // Kml holds the xml structure for kml files
 type Kml struct {
@@ -52,21 +71,7 @@ type Kml struct {
 				StyleURL string `xml:"styleUrl"`
 			} `xml:"Pair"`
 		} `xml:"StyleMap"`
-		Placemark []struct {
-			Text         string `xml:",chardata"`
-			Name         string `xml:"name"`
-			Address      string `xml:"address"`
-			Description  string `xml:"description"`
-			StyleURL     string `xml:"styleUrl"`
-			ExtendedData struct {
-				Text string `xml:",chardata"`
-				Data []struct {
-					Text  string `xml:",chardata"`
-					Name  string `xml:"name,attr"`
-					Value string `xml:"value"`
-				} `xml:"Data"`
-			} `xml:"ExtendedData"`
-		} `xml:"Placemark"`
+		Placemark `xml:"Placemark"`
 	} `xml:"Document"`
 }
 
@@ -121,18 +126,47 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err = xml.Unmarshal(b, &data); err != nil {
+	if err = xml.Unmarshal(bytes.ReplaceAll(b, []byte("\n"), []byte("")), &data); err != nil {
 		log.Fatal(err)
 	}
 
-	if b, err = json.Marshal(data); err != nil {
+	// fmt.Printf("%v\n", data)
+
+	if b, err = json.Marshal(data.Document.Placemark); err != nil {
 		log.Fatal(err)
 	}
 
 	if csvfile != "" {
-		if WriteFile(csvfile, b) != nil {
+		var (
+			f *os.File
+			j Placemark
+			w *csv.Writer
+		)
+
+		if err = json.Unmarshal(b, &j); err != nil {
 			log.Fatal(err)
 		}
+
+		if f, err = os.Create(csvfile); err != nil {
+			log.Fatal(err)
+		}
+
+		defer f.Close()
+
+		w = csv.NewWriter(f)
+
+		for _, listing := range j {
+			var row []string
+			row = append(row, listing.Name)
+			row = append(row, listing.Address)
+			row = append(row, listing.Description)
+			w.Write(row)
+		}
+
+		w.Flush()
+		// if WriteFile(csvfile, b) != nil {
+		// 	log.Fatal(err)
+		// }
 		log.Printf("xml converted to csv and saved to %s", csvfile)
 		os.Exit(0)
 	}
