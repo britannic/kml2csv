@@ -172,10 +172,10 @@ func main() {
 
 		w = csv.NewWriter(f)
 
-		row := []string{"Name", "Address", "Description"}
+		w.Write([]string{"Name", "Address", "Description"})
 
 		for _, listing := range j {
-
+			var row []string
 			// for _, edata := range listing.ExtendedData.Data {
 			// 	switch edata.Name {
 			// 	case "Registry Number":
